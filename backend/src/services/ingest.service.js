@@ -2,6 +2,8 @@ const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
+const { getVideoMetadata } = require('../utils/video.utils');
+const { extractAudio, transcribeAudio } = require('./stt.service');
 
 const STORAGE_DIR = path.join(__dirname, '../../storage');
 
@@ -90,12 +92,51 @@ const processIngestion = async (payload) => {
         throw error;
     }
 
+    // Extract Metadata
+    let aRollMetadata = null;
+    const aRollPath = path.join(assetDir, 'a_roll.mp4');
+    if (payload.a_roll && payload.a_roll.url) {
+        aRollMetadata = await getVideoMetadata(aRollPath);
+
+        // Perform Transcription for A-Roll
+        try {
+            const audioPath = path.join(assetDir, 'a_roll.mp3');
+            await extractAudio(aRollPath, audioPath);
+            const transcript = await transcribeAudio(audioPath);
+
+            const transcriptPath = path.join(assetDir, 'transcript.json');
+            await fs.writeFile(transcriptPath, JSON.stringify(transcript, null, 2));
+        } catch (sttError) {
+            console.error('Transcription failed:', sttError.message);
+            // Continue without failing the whole ingestion
+        }
+    }
+
+    const bRollsWithMetadata = [];
+    if (payload.b_rolls && Array.isArray(payload.b_rolls)) {
+        for (const broll of payload.b_rolls) {
+            let metadata = null;
+            if (broll.url && broll.id) {
+                const brollPath = path.join(brollsDir, `${broll.id}.mp4`);
+                metadata = await getVideoMetadata(brollPath);
+            }
+            bRollsWithMetadata.push({
+                ...broll,
+                technical_metadata: metadata
+            });
+        }
+    }
+
     // Save manifest
     const manifestPath = path.join(assetDir, 'manifest.json');
     const manifestData = {
         asset_id: assetId,
         created_at: new Date().toISOString(),
-        ...payload
+        a_roll: {
+            ...payload.a_roll,
+            technical_metadata: aRollMetadata
+        },
+        b_rolls: bRollsWithMetadata
     };
 
     await fs.writeFile(manifestPath, JSON.stringify(manifestData, null, 2));
