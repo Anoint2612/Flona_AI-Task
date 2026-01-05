@@ -1,5 +1,8 @@
 const ffmpeg = require('fluent-ffmpeg');
+const ffmpegPath = require('ffmpeg-static');
 const { AssemblyAI } = require('assemblyai');
+
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const client = new AssemblyAI({
     apiKey: process.env.STT_API_KEY,

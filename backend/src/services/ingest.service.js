@@ -4,6 +4,7 @@ const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const { getVideoMetadata } = require('../utils/video.utils');
 const { extractAudio, transcribeAudio } = require('./stt.service');
+const { generateEmbeddings } = require('./embedding.service');
 
 const STORAGE_DIR = path.join(__dirname, '../../storage');
 
@@ -140,6 +141,70 @@ const processIngestion = async (payload) => {
     };
 
     await fs.writeFile(manifestPath, JSON.stringify(manifestData, null, 2));
+
+    // Generate Embeddings
+    try {
+        const textsToEmbed = [];
+        const transcriptSegments = [];
+        const bRollsForEmbedding = [];
+
+        // 1. Prepare Transcript Sentences
+        const transcriptPath = path.join(assetDir, 'transcript.json');
+        try {
+            const transcriptData = await fs.readFile(transcriptPath, 'utf8');
+            const transcript = JSON.parse(transcriptData);
+
+            if (Array.isArray(transcript)) {
+                transcript.forEach(segment => {
+                    textsToEmbed.push(segment.text);
+                    transcriptSegments.push({ ...segment });
+                });
+            }
+        } catch (err) {
+            console.warn('No transcript found for embedding generation');
+        }
+
+        // 2. Prepare B-Roll Metadata
+        if (payload.b_rolls && Array.isArray(payload.b_rolls)) {
+            payload.b_rolls.forEach(broll => {
+                if (broll.metadata && broll.id) {
+                    textsToEmbed.push(broll.metadata);
+                    bRollsForEmbedding.push({ id: broll.id, metadata: broll.metadata });
+                }
+            });
+        }
+
+        if (textsToEmbed.length > 0) {
+            const embeddings = await generateEmbeddings(textsToEmbed);
+
+            // Map embeddings back to data structures
+            let offset = 0;
+
+            // Map to Transcript Segments
+            const transcriptWithEmbeddings = transcriptSegments.map((segment, index) => ({
+                ...segment,
+                embedding: embeddings[index]
+            }));
+            offset += transcriptSegments.length;
+
+            // Map to B-Rolls
+            const bRollsWithEmbeddings = bRollsForEmbedding.map((broll, index) => ({
+                ...broll,
+                embedding: embeddings[offset + index]
+            }));
+
+            const vectorStore = {
+                transcriptSegments: transcriptWithEmbeddings,
+                brolls: bRollsWithEmbeddings
+            };
+
+            const vectorStorePath = path.join(assetDir, 'vector_store.json');
+            await fs.writeFile(vectorStorePath, JSON.stringify(vectorStore, null, 2));
+        }
+    } catch (embedError) {
+        console.error('Embedding generation failed:', embedError.message);
+        // Continue without failing ingestion
+    }
 
     return { asset_id: assetId, status: 'completed' };
 };
