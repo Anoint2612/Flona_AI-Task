@@ -5,6 +5,8 @@ const { v4: uuidv4 } = require('uuid');
 const { getVideoMetadata } = require('../utils/video.utils');
 const { extractAudio, transcribeAudio } = require('./stt.service');
 const { generateEmbeddings } = require('./embedding.service');
+const { generateMatchingPlan } = require('./matching.service');
+const { renderVideo } = require('./render.service');
 
 const STORAGE_DIR = path.join(__dirname, '../../storage');
 
@@ -200,6 +202,12 @@ const processIngestion = async (payload) => {
 
             const vectorStorePath = path.join(assetDir, 'vector_store.json');
             await fs.writeFile(vectorStorePath, JSON.stringify(vectorStore, null, 2));
+
+            // Generate Matching Plan
+            await generateMatchingPlan(assetDir);
+
+            // Render Final Video
+            await renderVideo(assetDir);
         }
     } catch (embedError) {
         console.error('Embedding generation failed:', embedError.message);

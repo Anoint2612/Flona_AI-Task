@@ -32,7 +32,8 @@ const transcribeAudio = async (audioPath) => {
         }
 
         // Get sentence-level timestamps
-        const sentences = await client.transcripts.getSentences(transcript.id);
+        // Using client.transcripts.sentences(id) for v4+
+        const sentences = await client.transcripts.sentences(transcript.id);
 
         if (sentences && sentences.sentences) {
             return sentences.sentences.map((sent, index) => ({
