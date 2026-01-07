@@ -206,8 +206,8 @@ const processIngestion = async (payload) => {
             // Generate Matching Plan
             await generateMatchingPlan(assetDir);
 
-            // Render Final Video
-            await renderVideo(assetDir);
+            // Render Final Video (disabled for now)
+            // await renderVideo(assetDir);
         }
     } catch (embedError) {
         console.error('Embedding generation failed:', embedError.message);

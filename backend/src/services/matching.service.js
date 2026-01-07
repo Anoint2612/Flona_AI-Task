@@ -7,6 +7,44 @@ const computeCosineSimilarity = (vecA, vecB) => {
     return dotProduct;
 };
 
+const splitLongSegments = (segments) => {
+    const SPLIT_THRESHOLD = 10; // Split segments longer than 10 seconds
+    const CHUNK_SIZE = 6; // Create 6-second chunks
+
+    const result = [];
+
+    segments.forEach(segment => {
+        const duration = segment.end - segment.start;
+
+        if (duration <= SPLIT_THRESHOLD) {
+            // Keep segment as-is
+            result.push(segment);
+        } else {
+            // Split into chunks
+            const numChunks = Math.ceil(duration / CHUNK_SIZE);
+            const actualChunkSize = duration / numChunks;
+
+            for (let i = 0; i < numChunks; i++) {
+                const chunkStart = segment.start + (i * actualChunkSize);
+                const chunkEnd = i === numChunks - 1
+                    ? segment.end
+                    : segment.start + ((i + 1) * actualChunkSize);
+
+                result.push({
+                    id: `${segment.id}_chunk_${i}`,
+                    start: chunkStart,
+                    end: chunkEnd,
+                    text: segment.text, // Same text and embedding
+                    embedding: segment.embedding,
+                    originalSegmentId: segment.id
+                });
+            }
+        }
+    });
+
+    return result;
+};
+
 const generateMatchingPlan = async (assetDir) => {
     const vectorStorePath = path.join(assetDir, 'vector_store.json');
     const manifestPath = path.join(assetDir, 'manifest.json');
@@ -15,8 +53,13 @@ const generateMatchingPlan = async (assetDir) => {
         const vectorData = JSON.parse(await fs.readFile(vectorStorePath, 'utf8'));
         const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
 
-        const { transcriptSegments, brolls } = vectorData;
+        const { transcriptSegments: originalSegments, brolls } = vectorData;
         const aRollDuration = manifest.a_roll.technical_metadata.duration;
+
+        // Split long segments into smaller chunks
+        const transcriptSegments = splitLongSegments(originalSegments);
+
+        console.log(`Original segments: ${originalSegments.length}, After splitting: ${transcriptSegments.length}`);
 
         const matches = [];
 
@@ -34,7 +77,8 @@ const generateMatchingPlan = async (assetDir) => {
                 broll_id: broll.id,
                 similarity_score: computeCosineSimilarity(segment.embedding, broll.embedding),
                 segment_start: segment.start,
-                segment_end: segment.end
+                segment_end: segment.end,
+                segment_id: segment.id
             }));
 
             // Sort by similarity
@@ -56,9 +100,8 @@ const generateMatchingPlan = async (assetDir) => {
 
         for (const match of matches) {
             if (plan.length >= 5) break; // Max 5 insertions
-            if (usedBrolls.has(match.broll_id)) continue; // Don't reuse B-rolls
 
-            const duration = 3; // Fixed 3 seconds as per request (2-3s range, picking 3 for simplicity)
+            const duration = 3; // Fixed 3 seconds
             const start = match.segment_start;
             const end = start + duration;
 
@@ -85,7 +128,8 @@ const generateMatchingPlan = async (assetDir) => {
                     start_sec: start,
                     duration_sec: duration,
                     broll_id: match.broll_id,
-                    similarity_score: match.similarity_score
+                    similarity_score: match.similarity_score,
+                    matched_segment: match.segment_id
                 });
 
                 usedBrolls.add(match.broll_id);
@@ -95,6 +139,8 @@ const generateMatchingPlan = async (assetDir) => {
 
         // Sort plan by start time
         plan.sort((a, b) => a.start_sec - b.start_sec);
+
+        console.log(`Generated plan with ${plan.length} insertions`);
 
         // Save plan
         const planPath = path.join(assetDir, 'plan.json');

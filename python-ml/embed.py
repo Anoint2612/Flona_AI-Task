@@ -3,8 +3,8 @@ import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-# Load model once at startup
-# Using all-MiniLM-L6-v2 as requested
+
+# Here Using all-MiniLM-L6-v2 requested by Taske
 try:
     model = SentenceTransformer('all-MiniLM-L6-v2')
 except Exception as e:
