@@ -31,14 +31,12 @@ const transcribeAudio = async (audioPath) => {
             throw new Error(transcript.error);
         }
 
-        // Get sentence-level timestamps
-        // Using client.transcripts.sentences(id) for v4+
         const sentences = await client.transcripts.sentences(transcript.id);
 
         if (sentences && sentences.sentences) {
             return sentences.sentences.map((sent, index) => ({
                 id: index,
-                start: sent.start / 1000, // AssemblyAI uses ms
+                start: sent.start / 1000,
                 end: sent.end / 1000,
                 text: sent.text
             }));

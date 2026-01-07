@@ -3,13 +3,12 @@ const path = require('path');
 
 const computeCosineSimilarity = (vecA, vecB) => {
     const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
-    // Assuming vectors are already normalized by the Python service
     return dotProduct;
 };
 
 const splitLongSegments = (segments) => {
-    const SPLIT_THRESHOLD = 10; // Split segments longer than 10 seconds
-    const CHUNK_SIZE = 6; // Create 6-second chunks
+    const SPLIT_THRESHOLD = 10;
+    const CHUNK_SIZE = 6;
 
     const result = [];
 
@@ -17,10 +16,8 @@ const splitLongSegments = (segments) => {
         const duration = segment.end - segment.start;
 
         if (duration <= SPLIT_THRESHOLD) {
-            // Keep segment as-is
             result.push(segment);
         } else {
-            // Split into chunks
             const numChunks = Math.ceil(duration / CHUNK_SIZE);
             const actualChunkSize = duration / numChunks;
 
@@ -34,7 +31,7 @@ const splitLongSegments = (segments) => {
                     id: `${segment.id}_chunk_${i}`,
                     start: chunkStart,
                     end: chunkEnd,
-                    text: segment.text, // Same text and embedding
+                    text: segment.text,
                     embedding: segment.embedding,
                     originalSegmentId: segment.id
                 });
@@ -46,7 +43,6 @@ const splitLongSegments = (segments) => {
 };
 
 const generateExplanation = (segmentText, brollMetadata, similarityScore) => {
-    // Truncate long texts for readability
     const truncate = (text, maxLength = 80) => {
         if (text.length <= maxLength) return text;
         return text.substring(0, maxLength) + '...';
@@ -70,17 +66,13 @@ const generateMatchingPlan = async (assetDir) => {
         const { transcriptSegments: originalSegments, brolls } = vectorData;
         const aRollDuration = manifest.a_roll.technical_metadata.duration;
 
-        // Split long segments into smaller chunks
         const transcriptSegments = splitLongSegments(originalSegments);
 
         console.log(`Original segments: ${originalSegments.length}, After splitting: ${transcriptSegments.length}`);
 
         const matches = [];
 
-        // 1. Compute similarities
         transcriptSegments.forEach(segment => {
-            // Skip if segment starts in first 5 seconds or if insertion would go beyond last 5 seconds
-            // We assume insertion duration is 3 seconds
             const insertionEnd = segment.start + 3;
 
             if (segment.start < 5 || insertionEnd > aRollDuration - 5) {
@@ -97,17 +89,13 @@ const generateMatchingPlan = async (assetDir) => {
                 segment_text: segment.text
             }));
 
-            // Sort by similarity
             segmentMatches.sort((a, b) => b.similarity_score - a.similarity_score);
 
-            // Take top match for this segment
             if (segmentMatches.length > 0) {
                 matches.push(segmentMatches[0]);
             }
         });
 
-        // 2. Select final insertions with constraints
-        // Sort all potential matches by score
         matches.sort((a, b) => b.similarity_score - a.similarity_score);
 
         const plan = [];
@@ -115,23 +103,19 @@ const generateMatchingPlan = async (assetDir) => {
         const usedTimeRanges = [];
 
         for (const match of matches) {
-            if (plan.length >= 5) break; // Max 5 insertions
+            if (plan.length >= 5) break;
 
-            const duration = 3; // Fixed 3 seconds
+            const duration = 3;
             const start = match.segment_start;
             const end = start + duration;
 
-            // Check overlap and gap constraints
             const hasConflict = usedTimeRanges.some(range => {
-                // Check for overlap
                 const overlap = Math.max(0, Math.min(end, range.end) - Math.max(start, range.start));
                 if (overlap > 0) return true;
 
-                // Check for minimum 3 seconds gap
                 const gapBefore = start - range.end;
                 const gapAfter = range.start - end;
 
-                // If it's too close to an existing range (less than 3s gap)
                 if ((gapBefore >= 0 && gapBefore < 3) || (gapAfter >= 0 && gapAfter < 3)) {
                     return true;
                 }
@@ -158,12 +142,10 @@ const generateMatchingPlan = async (assetDir) => {
             }
         }
 
-        // Sort plan by start time
         plan.sort((a, b) => a.start_sec - b.start_sec);
 
         console.log(`Generated plan with ${plan.length} insertions`);
 
-        // Save plan
         const planPath = path.join(assetDir, 'plan.json');
         await fs.writeFile(planPath, JSON.stringify(plan, null, 2));
 

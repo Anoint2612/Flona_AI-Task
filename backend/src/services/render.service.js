@@ -23,41 +23,33 @@ const renderVideo = async (assetDir) => {
         return new Promise((resolve, reject) => {
             const command = ffmpeg();
 
-            // Input 0: A-roll
             command.input(aRollPath);
 
-            // Input 1..N: B-rolls
             plan.forEach(item => {
                 const bRollPath = path.join(bRollsDir, `${item.broll_id}.mp4`);
                 command.input(bRollPath);
             });
 
-            // Construct Filter Complex
             let filterComplex = [];
-            let lastStream = '0:v'; // Start with A-roll video stream
+            let lastStream = '0:v';
 
             plan.forEach((item, index) => {
-                const bRollInputIndex = index + 1; // 0 is A-roll
+                const bRollInputIndex = index + 1;
                 const scaledBRoll = `scaled_broll_${index}`;
                 const delayedBRoll = `delayed_broll_${index}`;
                 const start = item.start_sec;
                 const end = item.start_sec + item.duration_sec;
 
-                // Scale B-roll to match A-roll
                 filterComplex.push(`[${bRollInputIndex}:v][0:v]scale2ref=w=iw:h=ih:force_original_aspect_ratio=increase,crop=iw:ih[${scaledBRoll}]`);
 
-                // Delay B-roll to start at the insertion time
-                // We shift the PTS (Presentation Time Stamp) of the B-roll
                 filterComplex.push(`[${scaledBRoll}]setpts=PTS-STARTPTS+${start}/TB[${delayedBRoll}]`);
 
-                // Overlay
                 const nextStream = `v${index}`;
                 filterComplex.push(`[${lastStream}][${delayedBRoll}]overlay=enable='between(t,${start},${end})':eof_action=pass[${nextStream}]`);
 
                 lastStream = nextStream;
             });
 
-            // Map the final video stream and the original audio stream (A-roll audio)
             command.complexFilter(filterComplex);
             command.outputOptions(['-map', `[${lastStream}]`, '-map', '0:a']);
 

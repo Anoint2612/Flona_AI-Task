@@ -26,8 +26,6 @@ const downloadFile = async (url, filePath) => {
     });
 };
 
-// Helper to download file using fs.writeFile for simpler async handling with buffers if stream is tricky, 
-// but stream is better for large files. Let's stick to stream but handle directory creation carefully.
 const downloadVideo = async (url, destPath) => {
     try {
         const response = await axios({
@@ -36,10 +34,8 @@ const downloadVideo = async (url, destPath) => {
             responseType: 'stream'
         });
 
-        // Ensure directory exists (redundant if handled by caller, but safe)
         await fs.mkdir(path.dirname(destPath), { recursive: true });
 
-        // We need to use fs.createWriteStream from 'fs' not 'fs.promises'
         const fileStream = require('fs').createWriteStream(destPath);
 
         return new Promise((resolve, reject) => {
@@ -49,7 +45,6 @@ const downloadVideo = async (url, destPath) => {
                 resolve();
             });
             fileStream.on('error', (err) => {
-                // Delete the file if error occurs
                 fs.unlink(destPath).catch(() => { });
                 reject(err);
             });
@@ -64,19 +59,16 @@ const processIngestion = async (payload) => {
     const assetDir = path.join(STORAGE_DIR, assetId);
     const brollsDir = path.join(assetDir, 'brolls');
 
-    // Create directories
     await fs.mkdir(assetDir, { recursive: true });
     await fs.mkdir(brollsDir, { recursive: true });
 
     const downloads = [];
 
-    // Download A-Roll
     if (payload.a_roll && payload.a_roll.url) {
         const aRollPath = path.join(assetDir, 'a_roll.mp4');
         downloads.push(downloadVideo(payload.a_roll.url, aRollPath));
     }
 
-    // Download B-Rolls
     if (payload.b_rolls && Array.isArray(payload.b_rolls)) {
         payload.b_rolls.forEach((broll) => {
             if (broll.url && broll.id) {
@@ -86,22 +78,18 @@ const processIngestion = async (payload) => {
         });
     }
 
-    // Wait for all downloads
     try {
         await Promise.all(downloads);
     } catch (error) {
-        // Cleanup on failure could be implemented here
         console.error('Download failed:', error);
         throw error;
     }
 
-    // Extract Metadata
     let aRollMetadata = null;
     const aRollPath = path.join(assetDir, 'a_roll.mp4');
     if (payload.a_roll && payload.a_roll.url) {
         aRollMetadata = await getVideoMetadata(aRollPath);
 
-        // Perform Transcription for A-Roll
         try {
             const audioPath = path.join(assetDir, 'a_roll.mp3');
             await extractAudio(aRollPath, audioPath);
@@ -111,7 +99,6 @@ const processIngestion = async (payload) => {
             await fs.writeFile(transcriptPath, JSON.stringify(transcript, null, 2));
         } catch (sttError) {
             console.error('Transcription failed:', sttError.message);
-            // Continue without failing the whole ingestion
         }
     }
 
@@ -130,7 +117,6 @@ const processIngestion = async (payload) => {
         }
     }
 
-    // Save manifest
     const manifestPath = path.join(assetDir, 'manifest.json');
     const manifestData = {
         asset_id: assetId,
@@ -144,13 +130,11 @@ const processIngestion = async (payload) => {
 
     await fs.writeFile(manifestPath, JSON.stringify(manifestData, null, 2));
 
-    // Generate Embeddings
     try {
         const textsToEmbed = [];
         const transcriptSegments = [];
         const bRollsForEmbedding = [];
 
-        // 1. Prepare Transcript Sentences
         const transcriptPath = path.join(assetDir, 'transcript.json');
         try {
             const transcriptData = await fs.readFile(transcriptPath, 'utf8');
@@ -166,7 +150,6 @@ const processIngestion = async (payload) => {
             console.warn('No transcript found for embedding generation');
         }
 
-        // 2. Prepare B-Roll Metadata
         if (payload.b_rolls && Array.isArray(payload.b_rolls)) {
             payload.b_rolls.forEach(broll => {
                 if (broll.metadata && broll.id) {
@@ -179,17 +162,14 @@ const processIngestion = async (payload) => {
         if (textsToEmbed.length > 0) {
             const embeddings = await generateEmbeddings(textsToEmbed);
 
-            // Map embeddings back to data structures
             let offset = 0;
 
-            // Map to Transcript Segments
             const transcriptWithEmbeddings = transcriptSegments.map((segment, index) => ({
                 ...segment,
                 embedding: embeddings[index]
             }));
             offset += transcriptSegments.length;
 
-            // Map to B-Rolls
             const bRollsWithEmbeddings = bRollsForEmbedding.map((broll, index) => ({
                 ...broll,
                 embedding: embeddings[offset + index]
@@ -203,15 +183,10 @@ const processIngestion = async (payload) => {
             const vectorStorePath = path.join(assetDir, 'vector_store.json');
             await fs.writeFile(vectorStorePath, JSON.stringify(vectorStore, null, 2));
 
-            // Generate Matching Plan
             await generateMatchingPlan(assetDir);
-
-            // Render Final Video (disabled for now)
-            // await renderVideo(assetDir);
         }
     } catch (embedError) {
         console.error('Embedding generation failed:', embedError.message);
-        // Continue without failing ingestion
     }
 
     return { asset_id: assetId, status: 'completed' };

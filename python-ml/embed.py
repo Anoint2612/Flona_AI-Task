@@ -3,8 +3,6 @@ import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-
-# Here Using all-MiniLM-L6-v2 requested by Taske
 try:
     model = SentenceTransformer('all-MiniLM-L6-v2')
 except Exception as e:
@@ -13,7 +11,6 @@ except Exception as e:
 
 def process_input():
     try:
-        # Read from stdin
         input_data = sys.stdin.read()
         if not input_data:
             return
@@ -23,14 +20,10 @@ def process_input():
         if not isinstance(texts, list):
             raise ValueError("Input must be a JSON array of strings")
 
-        # Encode
-        # normalize_embeddings=True ensures cosine similarity can be computed via dot product
         embeddings = model.encode(texts, normalize_embeddings=True)
 
-        # Convert to list for JSON serialization
         output = embeddings.tolist()
         
-        # Write to stdout
         print(json.dumps(output))
 
     except Exception as e:

@@ -10,7 +10,6 @@ const getVideoMetadata = (filePath) => {
         ffmpeg.ffprobe(filePath, (err, metadata) => {
             if (err) {
                 console.error(`Error getting metadata for ${filePath}:`, err);
-                // Return null instead of rejecting to fail gracefully
                 return resolve(null);
             }
 
@@ -25,7 +24,6 @@ const getVideoMetadata = (filePath) => {
                 const { width, height, r_frame_rate } = videoStream;
                 const duration = format.duration || videoStream.duration;
 
-                // Calculate FPS
                 let fps = 0;
                 if (r_frame_rate) {
                     const parts = r_frame_rate.split('/');
