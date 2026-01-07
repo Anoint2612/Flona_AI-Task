@@ -1,0 +1,23 @@
+[
+  {
+    "start_sec": 5.36,
+    "duration_sec": 3,
+    "broll_id": "broll_1",
+    "similarity_score": 0.38979430424347083,
+    "matched_segment": "0_chunk_1"
+  },
+  {
+    "start_sec": 13.84,
+    "duration_sec": 3,
+    "broll_id": "broll_3",
+    "similarity_score": 0.5032681723454698,
+    "matched_segment": 1
+  },
+  {
+    "start_sec": 22.245,
+    "duration_sec": 3,
+    "broll_id": "broll_1",
+    "similarity_score": 0.3009160323190184,
+    "matched_segment": "2_chunk_1"
+  }
+]

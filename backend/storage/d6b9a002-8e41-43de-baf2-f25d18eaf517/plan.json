@@ -1,0 +1,26 @@
+[
+  {
+    "start_sec": 5.36,
+    "duration_sec": 3,
+    "broll_id": "broll_1",
+    "similarity_score": 0.38979430424347083,
+    "matched_segment": "0_chunk_1",
+    "explanation": "At this moment, the speaker says \"Mumbai jai city Meham rose bahar ka khana khale te hai time come Hota hai option...\". Inserting B-roll \"Mumbai street food context shot with closed or empty stalls, utensils and signbo...\" to visually support this content (39.0% match)."
+  },
+  {
+    "start_sec": 13.84,
+    "duration_sec": 3,
+    "broll_id": "broll_3",
+    "similarity_score": 0.5032681723454698,
+    "matched_segment": 1,
+    "explanation": "At this moment, the speaker says \"Poor hygiene or stale food.\". Inserting B-roll \"Close-up of uncovered food kept at a stall counter, subtle dust particles visibl...\" to visually support this content (50.3% match)."
+  },
+  {
+    "start_sec": 22.245,
+    "duration_sec": 3,
+    "broll_id": "broll_1",
+    "similarity_score": 0.30875619238686847,
+    "matched_segment": "2_chunk_1",
+    "explanation": "At this moment, the speaker says \"Ye sab immediately feel nahi hota but dhieere dheere health effect Karta hai isl...\". Inserting B-roll \"Mumbai street food context shot with closed or empty stalls, utensils and signbo...\" to visually support this content (30.9% match)."
+  }
+]

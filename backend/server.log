@@ -1,2 +1,18 @@
-[dotenv@17.2.3] injecting env (3) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
-Server is running on port 3000
+[dotenv@17.2.3] injecting env (3) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+/home/ankit/Desktop/Flona_AI-Task/backend/node_modules/router/lib/route.js:228
+        throw new TypeError('argument handler must be a function')
+        ^
+
+TypeError: argument handler must be a function
+    at Route.<computed> [as get] (/home/ankit/Desktop/Flona_AI-Task/backend/node_modules/router/lib/route.js:228:15)
+    at Router.<computed> [as get] (/home/ankit/Desktop/Flona_AI-Task/backend/node_modules/router/index.js:448:19)
+    at Object.<anonymous> (/home/ankit/Desktop/Flona_AI-Task/backend/src/routes/index.js:7:8)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+
+Node.js v24.9.0
