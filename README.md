@@ -32,7 +32,14 @@ cd backend
 npm install
 ```
 
-### 3. Python ML Service Setup
+### 3. Frontend Setup
+
+```bash
+cd frontend
+npm install
+```
+
+### 4. Python ML Service Setup
 
 ```bash
 # Create virtual environment
@@ -92,7 +99,23 @@ node index.js
 
 Server will start on `http://localhost:3000`
 
-### Test the API
+### Start Frontend (in a new terminal)
+
+```bash
+cd frontend
+npm run dev
+```
+
+Frontend will start on `http://localhost:5173`
+
+### Using the Application
+
+1. Open `http://localhost:5173` in your browser
+2. Enter descriptions for A-roll and B-roll clips
+3. Click "Generate Plan"
+4. View the transcript, insertion plan, and explanations
+
+### Test via API (Alternative)
 
 ```bash
 curl -X POST http://localhost:3000/api/ingest \
