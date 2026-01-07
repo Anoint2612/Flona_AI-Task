@@ -45,6 +45,20 @@ const splitLongSegments = (segments) => {
     return result;
 };
 
+const generateExplanation = (segmentText, brollMetadata, similarityScore) => {
+    // Truncate long texts for readability
+    const truncate = (text, maxLength = 80) => {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    };
+
+    const scorePercent = (similarityScore * 100).toFixed(1);
+    const truncatedSegment = truncate(segmentText);
+    const truncatedBroll = truncate(brollMetadata);
+
+    return `At this moment, the speaker says "${truncatedSegment}". Inserting B-roll "${truncatedBroll}" to visually support this content (${scorePercent}% match).`;
+};
+
 const generateMatchingPlan = async (assetDir) => {
     const vectorStorePath = path.join(assetDir, 'vector_store.json');
     const manifestPath = path.join(assetDir, 'manifest.json');
@@ -75,10 +89,12 @@ const generateMatchingPlan = async (assetDir) => {
 
             const segmentMatches = brolls.map(broll => ({
                 broll_id: broll.id,
+                broll_metadata: broll.metadata,
                 similarity_score: computeCosineSimilarity(segment.embedding, broll.embedding),
                 segment_start: segment.start,
                 segment_end: segment.end,
-                segment_id: segment.id
+                segment_id: segment.id,
+                segment_text: segment.text
             }));
 
             // Sort by similarity
@@ -129,7 +145,12 @@ const generateMatchingPlan = async (assetDir) => {
                     duration_sec: duration,
                     broll_id: match.broll_id,
                     similarity_score: match.similarity_score,
-                    matched_segment: match.segment_id
+                    matched_segment: match.segment_id,
+                    explanation: generateExplanation(
+                        match.segment_text,
+                        match.broll_metadata,
+                        match.similarity_score
+                    )
                 });
 
                 usedBrolls.add(match.broll_id);
